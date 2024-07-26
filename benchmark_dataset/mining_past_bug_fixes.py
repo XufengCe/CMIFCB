@@ -1,9 +1,9 @@
 import re
 from pydriller import Repository
-from .utils import run_merge_responses
+# from .utils import run_merge_responses
 import ast
 import astor
-
+from typing import List, Tuple
 
 """
 Constructs a list of tuple containing information about commits that fix bugs in python files from a given range of repositories.
