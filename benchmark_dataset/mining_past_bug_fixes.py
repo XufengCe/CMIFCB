@@ -128,6 +128,7 @@ Returns:
 
 """
 def extract_condition_raise_statements(code) -> List[str]:
+    code.strip()
     condition_raise_list = []
     # Parse the code into an AST
     tree = ast.parse(code)
@@ -153,4 +154,11 @@ def extract_condition_raise_statements(code) -> List[str]:
                 temp = remove_lines_between(unparse_node(node))
                 # temp = remove_lines_after_else(temp)
                 # print(temp)
+                # if b % 2 == 0 and b % 3 == 0:\n    raise OSError('error')\n
+                # will be if b % 2 == 0 and b % 3 == 0 : raise OSError('error')\n
+                temp = temp.split(':\n')
+                temp = temp[0].strip() + ' : ' + temp[1].strip()
+
+                
                 condition_raise_list.append(temp)
+    return condition_raise_list
