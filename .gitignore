@@ -1,2 +1,5 @@
 # add ./env to .gitignore
 env
+__pycache__
+.pytest_cache
+benchmark_dataset/test.ipynb
