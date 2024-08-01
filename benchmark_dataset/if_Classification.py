@@ -68,32 +68,23 @@ class IfStatementVisitor(ast.NodeVisitor):
 
     def is_nested_if(self, node):
         def contains_nested_if_with_raise(node):
-            # 检查当前节点的 body 是否有嵌套的 if 语句，并且这些 if 语句的 body 中是否包含 raise 语句
-            if isinstance(node, ast.If):
-                if any(isinstance(inner_stmt, ast.Raise) for inner_stmt in node.body):
-                    return True
-
-                # 递归检查 body 中的语句
-                for stmt in node.body:
-                    if isinstance(stmt, ast.If):
-                        if contains_nested_if_with_raise(stmt):
-                            return True
-                    elif isinstance(stmt, ast.AST):  # 递归检查其他 AST 节点
-                        if contains_nested_if_with_raise(stmt):
-                            return True
-
-                # 递归检查 orelse 中的语句
-                for stmt in node.orelse:
-                    if isinstance(stmt, ast.If):
-                        if contains_nested_if_with_raise(stmt):
-                            return True
-                    elif isinstance(stmt, ast.AST):  # 递归检查其他 AST 节点
-                        if contains_nested_if_with_raise(stmt):
-                            return True
-
+            for stmt in node.body:
+                if isinstance(stmt, ast.If):
+                    # 检查内层 if 语句的 body 中是否包含 raise 语句
+                    if any(isinstance(inner_stmt, ast.Raise) for inner_stmt in stmt.body):
+                        return True
+                    # 递归检查内层 if 语句的 body 和 orelse 部分
+                    if self.is_nested_if(stmt):
+                        return True
+                elif isinstance(stmt, ast.If):
+                    # 如果在 body 中找到内层的 if 语句，递归检查这个内层 if 语句
+                    if contains_nested_if_with_raise(stmt):
+                        return True
+            
             return False
 
         return contains_nested_if_with_raise(node)
+
 
     def is_terminating_if(self, node):
         contains_outer_raise = False
@@ -117,19 +108,37 @@ class IfStatementVisitor(ast.NodeVisitor):
         return False
 
     def is_loop_included_if(self, node):
-        for stmt in node.body:
-            # 如果是 raise 语句，检查上文是否有 for 或 while 循环
-            if isinstance(stmt, ast.Raise):
-                for prev_stmt in node.body[:node.body.index(stmt)]:
-                    if isinstance(prev_stmt, (ast.For, ast.While)):
-                        return True
-                    if isinstance(prev_stmt, ast.If):
-                        if any(isinstance(nstmt, (ast.For, ast.While)) for nstmt in prev_stmt.body):
-                            return True
-            if isinstance(stmt, ast.If):  # 检查是否是嵌套的 if 语句
-                if any(isinstance(nstmt, (ast.For, ast.While)) for nstmt in stmt.body):  # 检查嵌套的 if 语句的主体
+        def find_loops_before_raise(stmt_list):
+            for stmt in stmt_list:
+                if isinstance(stmt, (ast.For, ast.While)):
                     return True
-        return False
+                if isinstance(stmt, ast.If):
+                    if find_loops_before_raise(stmt.body):
+                        return True
+            return False
+        
+        def contains_raise_and_return_code(stmt_list):
+            """
+            检查语句列表是否包含 `raise` 语句，如果包含，则返回从最外层 `if` 语句到 `raise` 语句之间的所有代码段。
+            """
+            code_block = []
+            for stmt in stmt_list:
+                code_block.append(stmt)
+                if isinstance(stmt, ast.Raise):
+                    return code_block
+                elif isinstance(stmt, (ast.If, ast.For, ast.While)):
+                    nested_code_block = contains_raise_and_return_code(stmt.body)
+                    if nested_code_block:
+                        return code_block + nested_code_block
+            return False
+
+        raise_code_block = contains_raise_and_return_code(node.body)
+        if raise_code_block:
+            return find_loops_before_raise(raise_code_block)
+        else:
+            return False
+
+
 
 def classify_if_statements(code):
     tree = ast.parse(code)
