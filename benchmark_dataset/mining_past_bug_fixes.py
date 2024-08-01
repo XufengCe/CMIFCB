@@ -133,13 +133,20 @@ def if_elif_else_block(node, result):
         # Skip until the raise statement is found
         for n in node.body:
             if isinstance(n, ast.Raise):
-                result.append("if " + unparse_node(node.test) + " : " + unparse_node(n))
-                break
+                if len(node.orelse) > 0:
+                    result.append("if " + unparse_node(node.test) + " : " + unparse_node(n))
+                    break
         if node.orelse:
             if_elif_else_block(node.orelse[0], result)
-    else:
-        result.append("else : " + unparse_node(node))
+    elif isinstance(node, ast.Raise):
         
+        result.append("else : " + unparse_node(node))
+    elif hasattr(node, "orelse"):
+        # Skip until the raise statement is found
+        for n in node.body:
+            if isinstance(n, ast.Raise):
+                result.append("else : " + unparse_node(n))
+                break
 
 # Extract raise statements from an AST If node
 def extract_raise_statements(node) -> List[str]:
@@ -205,6 +212,7 @@ def extract_condition_raise_statements(code) -> List[str]:
     if not has_raise:
         return result
 
+    
     try:
         
         for node in ast.walk(tree):
@@ -230,7 +238,7 @@ def extract_condition_raise_statements(code) -> List[str]:
                     result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node))
     except Exception as e:
         print(e)
-        # raise e
+        raise e
         breakpoint()
             
     return list(set(result))

@@ -111,9 +111,8 @@ def test_extract_function():
     function_list = []
     function_list.extend(extract_functions(file_content))
 
-    
-    assert function_list.__len__() == 3
-    assert function_list == [func.strip(), func1.strip(), func2.strip()]
+    assert function_list[0].__len__() == 3
+    assert function_list[0] == [func.strip(), func1.strip(), func2.strip()]
 
 
 def test_extractor():
