@@ -1,7 +1,8 @@
 from mining_past_bug_fixes import extract_functions, extract_condition_raise_statements, construct_pairs, extract_c_m_f
 import json
 import pdb
-pairs = construct_pairs('https://github.com/sola-st/Dynapyt')
+# pairs = construct_pairs('https://github.com/sola-st/Dynapyt')
+pairs = construct_pairs('https://github.com/ActivityWatch/aw-core')
 
 old_func = []
 new_func = []
@@ -9,9 +10,13 @@ c_m_f_match = {}
 c_m_f_no_match = {}
 count = 0
 for pair in pairs:
-    old_functions, old_function_names = extract_functions(pair[2])
-    
-    new_functions, new_function_names = extract_functions(pair[3])
+    try:
+        old_functions, old_function_names = extract_functions(pair[2])
+        
+        new_functions, new_function_names = extract_functions(pair[3])
+    except Exception as e:
+        print(e)
+        continue
     old_func.append(old_functions)
     new_func.append(new_functions)
     for i in range(len(old_functions)):
