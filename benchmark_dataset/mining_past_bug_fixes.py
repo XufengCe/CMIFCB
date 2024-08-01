@@ -37,7 +37,7 @@ Parameters:
     file_content (str): The python file content.
 
 Returns:
-    List[str]: A list of strings containing the extracted functions.
+    List[str]: A list of strings containing the extracted functions and function names.
 """
 def extract_functions(file_content):
     tree = ast.parse(file_content)
@@ -51,7 +51,7 @@ def extract_functions(file_content):
 
     extractor = FunctionExtractor()
     extractor.visit(tree)
-    return functions
+    return functions, [f.name for f in ast.walk(tree) if isinstance(f, ast.FunctionDef)]
 # # Remove the lines after the else statement
 # # Ignore this function for now
 # def remove_lines_after_else(code):
@@ -130,8 +130,13 @@ def remove_lines_between(code: str) -> str:
 
 def if_elif_else_block(node, result):
     if isinstance(node, ast.If):
-        result.append("if " + unparse_node(node.test) + " : " + unparse_node(node.body[0]))
-        if_elif_else_block(node.orelse[0], result)
+        # Skip until the raise statement is found
+        for n in node.body:
+            if isinstance(n, ast.Raise):
+                result.append("if " + unparse_node(node.test) + " : " + unparse_node(n))
+                break
+        if node.orelse:
+            if_elif_else_block(node.orelse[0], result)
     else:
         result.append("else : " + unparse_node(node))
         
@@ -192,30 +197,52 @@ def extract_condition_raise_statements(code) -> List[str]:
     tree = ast.parse(code)
     # Traverse the AST
     if_node = None
+    has_raise = False
     for node in ast.walk(tree):
-        if isinstance(node, ast.If):
-            if_node = node
-            # print("Node:")
-            # print(unparse_node(node))
-            # print("isinstance of node is:" + type(node).__name__)
-            # print()
-            result.extend(extract_raise_statements(node))
+        if isinstance(node, ast.Raise):
+            has_raise = True
+            break
+    if not has_raise:
+        return result
 
-            # result.extend(extract_raise_statements(node))
-        elif isinstance(node, ast.Raise) and if_node and (node.col_offset == 4 or node.col_offset == 2):
-            if len(if_node.body) > 1:
-                for n in if_node.body:
-                    # If there are if statements and is not closed with an else block
-                    if isinstance(n, ast.If) and not n.orelse:
-                        negated_condition = ast.UnaryOp(op=ast.Not(), operand=n.test)
-                        result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node))
-                        break
-            else:
-                negated_condition = ast.UnaryOp(op=ast.Not(), operand=if_node.test)
-                result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node))
-            
+    try:
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                if_node = node
+                # print("Node:")
+                # print(unparse_node(node))
+                # print("isinstance of node is:" + type(node).__name__)
+                # print()
+                result.extend(extract_raise_statements(node))
 
+                # result.extend(extract_raise_statements(node))
+            elif isinstance(node, ast.Raise) and if_node and (node.col_offset == 4 or node.col_offset == 2):
+                if len(if_node.body) > 1:
+                    for n in if_node.body:
+                        # If there are if statements and is not closed with an else block
+                        if isinstance(n, ast.If) and not n.orelse:
+                            negated_condition = ast.UnaryOp(op=ast.Not(), operand=n.test)
+                            result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node))
+                            break
+                else:
+                    negated_condition = ast.UnaryOp(op=ast.Not(), operand=if_node.test)
+                    result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node))
+    except Exception as e:
+        print(e)
+        # raise e
+        breakpoint()
             
     return list(set(result))
 
 
+def extract_c_m_f(code) -> List[str]:
+    result = []
+    result.extend(extract_condition_raise_statements(code))
+    temp = []
+    for item in result:
+        c = item.split(":")[0].strip()
+        m = item.split(":")[1].strip()
+        temp.append([c, m, code.strip()])
+        # print(m)
+    return temp
