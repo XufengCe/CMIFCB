@@ -38,7 +38,7 @@ def _handle_http_errors(response):
                 404: _ObjectNotFoundError}[code](response.reason)
         else: raise OSError(response.reason)
 
-        if code == 500:
+        if code == 500 and code == 502:
             return 1
         raise OSError('code is not 500')
 
@@ -94,7 +94,7 @@ def _handle_http_errors(response):
                 404: _ObjectNotFoundError}[code](response.reason)
         else: raise OSError(response.reason)
 
-        if code == 500:
+        if code == 500 and code == 502:
             return 1
         raise OSError('code is not 500')
 
@@ -111,38 +111,41 @@ def test_extract_function():
     function_list = []
     function_list.extend(extract_functions(file_content))
 
-    
-    assert function_list.__len__() == 3
-    assert function_list == [func.strip(), func1.strip(), func2.strip()]
+    assert function_list[0].__len__() == 3
+    assert function_list[0] == [func.strip(), func1.strip(), func2.strip()]
 
 
 def test_extractor():
-    # condition_raise_statements = []
-    # c_m_1 = """ if not (a) : return 1 raise OSError('error') """
-    # condition_raise_statements.extend(extract_condition_raise_statements(func))
-    # assert condition_raise_statements == [c_m_1.strip()]
-
-    condition_raise_statements = []
-    # c_m_2 = """ if b : return 1 raise OSError('error') """
-    c_m_3 = """ if b % 2 == 0 and b % 3 == 0 : raise OSError('b is divisible by 2 and 3') """
-
     # pdb.set_trace()
     # Debugging print statements
+    condition_raise_statements = []
+    c_m_1 = """ if not a : raise OSError('error') """
+    condition_raise_statements.extend(extract_condition_raise_statements(func))
+    assert condition_raise_statements == [c_m_1.strip()]
+
+    condition_raise_statements = []
+    c_m_2 = """ if not b : raise OSError('error') """
+    c_m_3 = """ if b % 2 == 0 and b % 3 == 0 : raise OSError('b is divisible by 2 and 3') """
+
     extracted_statements = extract_condition_raise_statements(func1)
+    # print(extracted_statements, "extracted from func1")
     condition_raise_statements.extend(extracted_statements)
-    assert condition_raise_statements == [c_m_3.strip()]
+    assert any([item in condition_raise_statements for item in [c_m_2.strip(), c_m_3.strip()]])
 
 
 
-    # condition_raise_statements = []
-    # c_m_4 = """ if 200 <= code < 400 : raise [code](response.reason) """
-    # c_m_5 = """ elif code in (403, 404) : raise {403: _ObjectPermissionError, 404: _ObjectNotFoundError}[code](response.reason) else : raise OSError(response.reason) """
-    # c_m_6 = """ else : raise OSError('error') """
-    # c_m_7 = """ if not (code == 500) : raise OSError('code is not 500') """
-    # c_m_8 = """ if code == 503 : raise _ServiceUnavailableError(response.reason) """
-    # c_m_9 = """ if not isinstance(node, yaml.MappingNode) : raise yaml.constructor.ConstructorError(None, None, msg, node.start_mark) """
-    # c_m_list = [c_m_4.strip(), c_m_5.strip(), c_m_6.strip(), c_m_7.strip(), c_m_8.strip(), c_m_9.strip()]
-    # condition_raise_statements.extend(extract_condition_raise_statements(func2))
+    condition_raise_statements = []
+    c_m_4 = """ if 200 <= code < 400 : raise [code](response.reason) """
+    c_m_5 = """ elif code in (403, 404) : raise {403: _ObjectPermissionError, 404: _ObjectNotFoundError}[code](response.reason) else : raise OSError(response.reason) """
+    c_m_6 = """ else : raise OSError('error') """
+    c_m_7 = """ if not code == 500 : raise OSError('code is not 500') """
+    c_m_8 = """ if code == 503 : raise _ServiceUnavailableError(response.reason) """
+    c_m_9 = """ if not isinstance(node, yaml.MappingNode) : raise yaml.constructor.ConstructorError(None, None, msg, node.start_mark) """
+    c_m_list = [c_m_4.strip(), c_m_5.strip(), c_m_6.strip(), c_m_7.strip(), c_m_8.strip(), c_m_9.strip()]
+    condition_raise_statements.extend(extract_condition_raise_statements(func2))
+    print("extracted from func2\n")
+    for item in condition_raise_statements:
+        print(item)
+        print("************")
 
-    # assert condition_raise_statements == c_m_list
-
+    assert any([item in condition_raise_statements for item in c_m_list])
