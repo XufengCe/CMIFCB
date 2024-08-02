@@ -249,8 +249,8 @@ def extract_c_m_f(code) -> List[str]:
     result.extend(extract_condition_raise_statements(code))
     temp = []
     for item in result:
-        c = item.split(":")[0].strip()
-        m = item.split(":")[1].strip()
+        c = item.split(":", 1)[0].strip()
+        m = item.split(":", 1)[1].strip()
         temp.append([c, m, code.strip()])
         # print(m)
     return temp
