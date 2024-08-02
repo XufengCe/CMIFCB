@@ -62,7 +62,7 @@ def process_link(link):
     return c_m_f_match_all, c_m_f_no_match_all, old_func, new_func
 
 def scrape_links(links, cpu_count=cpu_count()):
-    # 
+    print("cpu_count: ", cpu_count)
     with Pool(cpu_count) as pool:
         results = pool.map(process_link, links)
     
@@ -95,8 +95,8 @@ def scrape_links(links, cpu_count=cpu_count()):
 
 
 if __name__ == '__main__':
-    # start_time = time.time()
+    start_time = time.time()
     print("Scraping links")
     links = ['https://github.com/sola-st/Dynapyt', 'https://github.com/ActivityWatch/aw-core']
     scrape_links(links)
-    # print("Time taken: ", time.time() - start_time)
+    print("Time taken: ", time.time() - start_time)
