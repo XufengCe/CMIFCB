@@ -3,3 +3,4 @@ env
 __pycache__
 .pytest_cache
 benchmark_dataset/test.ipynb
+benchmark_dataset/testdatafiles/
