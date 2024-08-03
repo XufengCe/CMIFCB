@@ -103,14 +103,16 @@ def extract_raise_statements(node) -> List[str]:
                     if isinstance(node.body[i], ast.Raise):
                         raise_node = node.body[i]
                     if isinstance(node.body[i], ast.If) and not node.body[i].orelse and raise_node:
+                        
                         # Negate the condition use ast.UnaryOp to get the negation of the condition
                         negated_condition = ast.UnaryOp(op=ast.Not(), operand=node.body[i].test)
                         result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(raise_node))
                         break
 
             else:
-                negated_condition = ast.UnaryOp(op=ast.Not(), operand=node.body[0].test)
-                result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node.body[0]))
+                if isinstance(node.body[0], ast.Raise):
+                    negated_condition = ast.UnaryOp(op=ast.Not(), operand=node.body[0].test)
+                    result.append("if " + unparse_node(negated_condition) + " : " + unparse_node(node.body[0]))
         else:
             # Ignore the line that is not if or raise statement
             if_str = unparse_node(node.test)
