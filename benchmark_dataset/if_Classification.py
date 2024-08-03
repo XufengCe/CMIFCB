@@ -87,25 +87,34 @@ class IfStatementVisitor(ast.NodeVisitor):
 
 
     def is_terminating_if(self, node):
-        contains_outer_raise = False
+        def contains_raise_or_return(stmt_list):
+            # 检查语句列表中是否包含 `raise` 或 `return` 语句
+            return any(isinstance(stmt, (ast.Raise, ast.Return)) for stmt in stmt_list)
+
+        def find_remaining_code_after_if(node):
+            """
+            获取当前 `if` 语句之后的代码块。
+            """
+            parent = node
+            while hasattr(parent, 'parent'):
+                parent = parent.parent
+            
+            function_body = [stmt for stmt in parent.body if stmt is not node]
+            return function_body
         
-        for stmt in node.body:
-            # 检查外层的 if 语句中是否存在 `raise` 语句
-            if isinstance(stmt, ast.Raise):
-                contains_outer_raise = True
-                break
-
-        if contains_outer_raise and not self.is_simple_if(node):
-            for stmt in node.body:
-                if isinstance(stmt, ast.If):
-                    # 检查内层的 if 语句中是否包含 `return` 或 `raise` 语句
-                    if any(isinstance(inner_stmt, (ast.Return, ast.Raise)) for inner_stmt in stmt.body):
-                        return True
-                    # 递归检查嵌套的 if 语句
-                    if self.is_terminating_if(stmt):
-                        return True
-
+        # 检查 `if` 语句的 body 部分是否包含 `raise` 或 `return` 语句
+        contains_outer_raise_or_return = contains_raise_or_return(node.body)
+        
+        if contains_outer_raise_or_return:
+            # 检查 `if` 语句之后的剩余代码中是否包含 `raise` 语句
+            remaining_code = find_remaining_code_after_if(node)
+            contains_raise_in_remaining_code = contains_raise_or_return(remaining_code)
+            
+            return contains_raise_in_remaining_code
+        
         return False
+
+
 
     def is_loop_included_if(self, node):
         def find_loops_before_raise(stmt_list):
