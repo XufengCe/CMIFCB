@@ -2,13 +2,20 @@ import ast
 
 class IfStatementVisitor(ast.NodeVisitor):
     def __init__(self):
-        self.simple_ifs = []
-        self.multi_branch_ifs = []
-        self.nested_ifs = []
-        self.terminating_ifs = []
-        self.loop_included_ifs = []
+        self.simple_ifs = []        
+        self.multi_branch_ifs = []  
+        self.nested_ifs = []        
+        self.terminating_ifs = []   
+        self.loop_included_ifs = [] 
+        self.current_function_body = []  
+
+    def visit_FunctionDef(self, node):
+        # 访问函数定义节点，存储函数体
+        self.current_function_body = node.body
+        self.generic_visit(node)
 
     def visit_If(self, node):
+        # 访问 if 语句节点
         if self.is_simple_if(node):
             self.simple_ifs.append(node)
         
@@ -85,38 +92,61 @@ class IfStatementVisitor(ast.NodeVisitor):
 
         return contains_nested_if_with_raise(node)
 
-
     def is_terminating_if(self, node):
         def contains_raise_or_return(stmt_list):
-            # 检查语句列表中是否包含 `raise` 或 `return` 语句
-            return any(isinstance(stmt, (ast.Raise, ast.Return)) for stmt in stmt_list)
+            """
+            递归检查 `if` 语句内部所有代码是否包含 `raise` 或 `return` 语句。
+            """
+            if isinstance(stmt_list, list):
+                return any(
+                    isinstance(stmt, (ast.Raise, ast.Return)) or
+                    (isinstance(stmt, (ast.If, ast.For, ast.While)) and contains_raise_or_return(stmt.body))
+                    for stmt in stmt_list
+                )
+            return False
+        
+        def contains_raise(stmt_list):
+            # 检查语句列表中是否包含 `raise`
+            return any(isinstance(stmt, ast.Raise) for stmt in stmt_list)
 
         def find_remaining_code_after_if(node):
             """
-            获取当前 `if` 语句之后的代码块。
+            获取当前 `if` 语句之后的代码块，直到下一个 `raise` 或 `return` 语句的下一行代码开始。
             """
-            parent = node
-            while hasattr(parent, 'parent'):
-                parent = parent.parent
+            remaining_code = []
+            # 找到当前 `if` 语句在函数体中的索引
+            if node not in self.current_function_body:
+                return remaining_code
             
-            function_body = [stmt for stmt in parent.body if stmt is not node]
-            return function_body
-        
-        # 检查 `if` 语句的 body 部分是否包含 `raise` 或 `return` 语句
+            index = self.current_function_body.index(node)
+
+            
+            # 遍历函数体，找到 `if` 语句之后的代码
+            for i in range(index + 1, len(self.current_function_body)):
+                stmt = self.current_function_body[i]
+                print(stmt)
+                if isinstance(stmt, (ast.Raise, ast.Return)):
+                    # 从 `raise` 或 `return` 语句的下一行开始收集代码
+                    remaining_code = self.current_function_body[i:]
+                    break
+            # print(remaining_code)
+
+            return remaining_code
+
+        # 检查 `if` 语句的 body 部分是否包含 `raise` 或 `return`
         contains_outer_raise_or_return = contains_raise_or_return(node.body)
-        
+
         if contains_outer_raise_or_return:
-            # 检查 `if` 语句之后的剩余代码中是否包含 `raise` 语句
+            # 检查 `if` 语句之后的剩余代码中是否包含 `raise`
             remaining_code = find_remaining_code_after_if(node)
-            contains_raise_in_remaining_code = contains_raise_or_return(remaining_code)
+            contains_raise_in_remaining_code = contains_raise(remaining_code)
             
             return contains_raise_in_remaining_code
-        
+
         return False
 
-
-
     def is_loop_included_if(self, node):
+        # 判断 if 语句是否包含循环
         def find_loops_before_raise(stmt_list):
             for stmt in stmt_list:
                 if isinstance(stmt, (ast.For, ast.While)):
@@ -127,9 +157,6 @@ class IfStatementVisitor(ast.NodeVisitor):
             return False
         
         def contains_raise_and_return_code(stmt_list):
-            """
-            检查语句列表是否包含 `raise` 语句，如果包含，则返回从最外层 `if` 语句到 `raise` 语句之间的所有代码段。
-            """
             code_block = []
             for stmt in stmt_list:
                 code_block.append(stmt)
@@ -146,8 +173,6 @@ class IfStatementVisitor(ast.NodeVisitor):
             return find_loops_before_raise(raise_code_block)
         else:
             return False
-
-
 
 def classify_if_statements(code):
     tree = ast.parse(code)
