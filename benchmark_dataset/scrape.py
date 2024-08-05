@@ -7,8 +7,13 @@ def process_link(link):
 
     # pairs = construct_pairs('https://github.com/sola-st/Dynapyt')
     # pairs = construct_pairs('https://github.com/ActivityWatch/aw-core')
+    try:
 
-    pairs = construct_pairs(link)
+        pairs = construct_pairs(link)
+    except Exception as e:
+        print(e)
+        return [], [], [], []
+
     old_func = []
     new_func = []
     c_m_f_match_all = []
@@ -65,6 +70,7 @@ def scrape_links(links, cpu_count=cpu_count()):
     print("cpu_count: ", cpu_count)
     with Pool(cpu_count) as pool:
         results = pool.map(process_link, links)
+
     
     # Combine results from all processes
     all_old_func = []
@@ -100,7 +106,8 @@ if __name__ == '__main__':
     # Read the links from the testdata/repo_links.json file
     with open('testdata/repo_links.json', 'r') as f:
         links = json.load(f)
-    links = list(set(links))
     print("Links: ", len(links))
+    # links = links[:25]
+    # links = ["https://github.com/git-annex-remote-rclone/git-annex-remote-rclone"]
     scrape_links(links)
     print("Time taken: ", time.time() - start_time)
