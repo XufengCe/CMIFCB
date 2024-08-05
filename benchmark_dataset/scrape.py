@@ -20,7 +20,7 @@ def process_link(link):
             
             new_functions, new_function_names = extract_functions(pair[3])
         except Exception as e:
-            print(e)
+            # print(e)
             continue
         old_func.append(old_functions)
         new_func.append(new_functions)
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     # Read the links from the testdata/repo_links.json file
     with open('testdata/repo_links.json', 'r') as f:
         links = json.load(f)
+    links = list(set(links))
     print("Links: ", len(links))
-    scrape_links(links)
+    # scrape_links(links)
     print("Time taken: ", time.time() - start_time)
