@@ -97,6 +97,9 @@ def scrape_links(links, cpu_count=cpu_count()):
 if __name__ == '__main__':
     start_time = time.time()
     print("Scraping links")
-    links = ['https://github.com/sola-st/Dynapyt', 'https://github.com/ActivityWatch/aw-core']
+    # Read the links from the testdata/repo_links.json file
+    with open('testdata/repo_links.json', 'r') as f:
+        links = json.load(f)
+    print("Links: ", len(links))
     scrape_links(links)
     print("Time taken: ", time.time() - start_time)
