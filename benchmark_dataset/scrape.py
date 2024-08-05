@@ -102,5 +102,5 @@ if __name__ == '__main__':
         links = json.load(f)
     links = list(set(links))
     print("Links: ", len(links))
-    # scrape_links(links)
+    scrape_links(links)
     print("Time taken: ", time.time() - start_time)
