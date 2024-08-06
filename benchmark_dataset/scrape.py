@@ -2,6 +2,59 @@ from mining_past_bug_fixes import extract_functions, extract_condition_raise_sta
 import json
 import time
 from multiprocessing import Pool, cpu_count
+import inspect
+import difflib
+import ast
+
+
+def check_if_there_is_raise(line, func):
+    tree = ast.parse(func)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If):
+            x = 0
+            for n in ast.walk(node):
+                if line == ast.unparse(n).strip():
+                    # return True
+                    x = 1
+                if x == 1 and isinstance(n, ast.Raise):
+                    return True
+    return False
+def check_c_m_change(old_func, new_func):
+    diff = difflib.ndiff(old_func.splitlines(), new_func.splitlines())
+
+    for line in diff:
+        # print("line", line)
+        if line.startswith('-'):
+            
+            line = line.replace('-', '')
+            line = line.replace(':', '')
+            if 'if' in line:
+                line = line.replace('if', '')
+            elif 'elif' in line:
+                line = line.replace('elif', '')
+
+            elif 'raise' in line:
+                return True
+            else:
+                continue
+            if check_if_there_is_raise(line.strip(), old_func):
+                return True
+        if line.startswith('+'):
+            line = line.replace('+', '')
+            line = line.replace(':', '')
+            if 'if' in line:
+                line = line.replace('if', '')
+            elif 'elif' in line:
+                line = line.replace('elif', '')
+            elif 'raise' in line:
+                return True
+            else:
+                continue
+            if check_if_there_is_raise(line.strip(), new_func):
+                return True
+    return False
+
+
 def process_link(link):
     print("Processing link: ", link)
 
@@ -35,7 +88,7 @@ def process_link(link):
             # Looking for the function in the new code
             for j in range(len(new_functions)):
 
-                if old_function_names[i] == new_function_names[j] and old_functions[i] != new_functions[j]:
+                if old_function_names[i] == new_function_names[j] and old_functions[i] != new_functions[j] and check_c_m_change(old_functions[i], new_functions[j]):
                     c_m_f_old = extract_c_m_f(old_functions[i])
                     c_m_f_new = extract_c_m_f(new_functions[j])
                     
@@ -108,6 +161,6 @@ if __name__ == '__main__':
         links = json.load(f)
     print("Links: ", len(links))
     # links = links[:25]
-    # links = ["https://github.com/git-annex-remote-rclone/git-annex-remote-rclone"]
+    links = ["https://github.com/c3nav/c3nav"]
     scrape_links(links)
     print("Time taken: ", time.time() - start_time)
