@@ -48,6 +48,7 @@ class IfStatementVisitor(ast.NodeVisitor):
             contains_raise = False
 
             for stmt in node.body:
+                # print(stmt)
                 if isinstance(stmt, ast.Raise):
                     contains_raise = True
                 if isinstance(stmt, ast.If):
@@ -57,6 +58,8 @@ class IfStatementVisitor(ast.NodeVisitor):
                 for i, stmt in enumerate(node.body): # 根据索引来访问下一行代码
                     if i + 1 < len(node.body):
                         stmt = node.body[i + 1]
+                        if isinstance(stmt, ast.Raise):
+                            contains_raise = True
                     else:
                         return contains_raise        
 
@@ -186,3 +189,15 @@ def classify_if_statements(code):
         "terminating_ifs": visitor.terminating_ifs,
         "loop_included_ifs": visitor.loop_included_ifs,
     }
+
+
+
+result = classify_if_statements(code)
+output = []
+
+for category, statements in result.items():
+    if len(statements) > 0:
+        output.append(f"{category}: {len(statements)}")
+
+output_string = ", ".join(output)
+print(output_string)
